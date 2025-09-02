@@ -7,6 +7,9 @@ from tqdm import tqdm
 
 from dlbar import DownloadBar
 
+#Переменные окружения
+from tokens import market_api, tickers_url
+
 download_bar = DownloadBar()
 
 #------------------------------
@@ -14,7 +17,7 @@ pd.set_option('display.max_rows', None)
 
 def tickerCollector():
     #Данные о тикерах сохраним в переменной file. Так как ссылка не меняется, то можем её захардкодить и не скачивать на компьютер эксель
-    url = "https://www.moex.com/ru/listing/securities-list-csv.aspx?type=1"
+    url = tickers_url
     fileName = "securities-list-csv.aspx"
     download_bar.download(
         url=url,
@@ -41,7 +44,7 @@ def tickerCollector():
 
 #Вспомогательная функция подключения к АПИ биржи. Её мы будем вызывать в методах класса AnalizeApi, когда нам потребуется информация с MOEX
 def callApi(ticker):
-    url = str(f"https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities/{ticker}.jsonp?iss.meta=off&iss.json=extended&callback")    
+    url = str(market_api)    
     response = requests.get(url=url)
     response =  response.json()
     return response
@@ -70,7 +73,7 @@ class AnalizeApi():
     #Метод, возвращающий информацию об отчётности компании за конкретный год, принимает на вход Ticker объекта и год int, 
     # на выход отдаёт отчётность компании за указанный год
     def get_report(self):
-        url = str(f"https://financemarker.ru/api/stocks/MOEX:{self.ticker}/finance")
+        url = str(market_api)
         period = "Y"
         reportType = "МСФО"
         response = requests.get(url=url)
@@ -83,7 +86,7 @@ class AnalizeApi():
     # на выход отдаёт фундаментальную статистику по бумаге за указанный год. Помогает найти информацию, которую не отдаёт мосбиржа
 
     def get_stocks_statistics(self):
-        url = str(f"https://financemarker.ru/api/stocks/MOEX:{self.ticker}/finance")
+        url = str(market_api)
         period = 12
         response = requests.get(url=url)
         shares = response.json()["data"]["shares"]
@@ -121,35 +124,6 @@ def parsedReport(moexTickersStocks):
     return tickerData
 
 
-#Фильтруем бумаги исходя из колебаний SP500
-# def stockTacker(df):
-#     df = df[(df["P/E"] >= 6) & (df["P/E"] <= 35)]
-#     df = df[(df["P/S"] >= 0.8) & (df["P/S"] <= 3.5)]
-#     df = df[(df["P/FCF"] <= 10)]
-
-#     return df
-
-#Анализируем датафрейм, включающий все цены всех интересующих нас акций за 3 года
-
-# def returns():
-#     files = glob.glob(r"Price_3Y/*.csv")
-
-#     returnDF = pd.DataFrame()
-
-#     for file in files:
-#         data = pd.read_csv(file, sep = ";")
-
-#         ticker = data.iloc[0, data.columns.get_loc('<TICKER>')]
-#         first_value = data.iloc[0, data.columns.get_loc('<CLOSE>')]
-#         last_value = data.iloc[-1, data.columns.get_loc('<CLOSE>')]
-#         result = (last_value-first_value) / last_value
-
-#         returnN = {'TICKER':[ticker], 'RETURN':[result]}
-#         returnN = pd.DataFrame(returnN)
-
-#         returnDF = pd.concat([returnDF, returnN])
-
-
 def main():
 
     moexTickersStocks = tickerCollector()
@@ -157,8 +131,6 @@ def main():
     df = pd.DataFrame(data = parsedReport(moexTickersStocks), columns = ["TICKER", "ЦЕНА", "КОЛИЧЕСТВО АКЦИЙ", "ПРИБЫЛЬ", "ВЫРУЧКА", "FCF", \
                                                                          "Собственный капитал (EQUITY)","АКТИВЫ 2021", "АКТИВЫ 2022"])
 
-
-    #df = stockTacker(df)
     df.to_excel("Акции для анализа.xlsx", index = False)
 
 
